@@ -40,6 +40,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -124,18 +125,8 @@ public class HomeCommand extends Command {
             return CompletableFuture.completedFuture(false);
         }
 
-        // /plot home                     -> eigene Plots, Seite 1
-        // /plot home <zahl|last|n>       -> eigene Plots, Seite X
-        // /plot home <spieler>           -> Plots des Spielers, Seite 1
-        // /plot home <spieler> <zahl>    -> Plots des Spielers, Seite X
-        // /plot home <alias>             -> Plot mit dem Alias
-        // /plot home <area;x;y>          -> bestimmtes Plot
-        // /plot home <area> <x;y>        -> bestimmtes Plot
-        // /plot home <area> <page>       -> eigene Plots in Area, Seite X
-
         switch (args.length) {
             case 0 -> {
-                // /p h  -> eigene Plots
                 PlotQuery query = ownQuery(player);
                 sortBySettings(query, player);
                 home(player, query, 1, confirm, whenDone);
@@ -143,7 +134,6 @@ public class HomeCommand extends Command {
             case 1 -> {
                 final String arg0 = args[0];
 
-                // Zahl oder "last"/"n" -> Seitennavigation auf eigenen Plots
                 if (!isInvalidPageNr(arg0)) {
                     int page = getPageNr(arg0);
                     if (page == Integer.MIN_VALUE) {
@@ -156,7 +146,6 @@ public class HomeCommand extends Command {
                     break;
                 }
 
-                // Plot-ID (z.B. "world;1;2" oder "1;2")
                 if (arg0.contains(";") || arg0.contains(",")) {
                     final Plot fromId = Plot.getPlotFromString(player, arg0, false);
                     if (fromId != null && fromId.isOwner(player.getUUID())) {
@@ -165,7 +154,6 @@ public class HomeCommand extends Command {
                     }
                 }
 
-                // Plot-Area (z.B. "world")
                 PlotArea plotArea = this.plotAreaManager.getPlotAreaByString(arg0);
                 if (plotArea != null) {
                     PlotQuery query = ownQuery(player).inArea(plotArea);
@@ -174,15 +162,12 @@ public class HomeCommand extends Command {
                     break;
                 }
 
-                // Spielername -> Plots dieses Spielers anzeigen (wie /p v <spieler>)
                 PlotSquared.get().getImpromptuUUIDPipeline().getSingle(arg0, (uuid, throwable) -> {
                     if (throwable instanceof TimeoutException) {
                         player.sendMessage(TranslatableCaption.of("players.fetching_players_timeout"));
                     } else if (uuid != null && !PlotQuery.newQuery().ownedBy(uuid).anyMatch()) {
-                        // Spieler gefunden, aber hat keine Plots
                         player.sendMessage(TranslatableCaption.of("errors.player_no_plots"));
                     } else if (uuid == null) {
-                        // Kein Spieler gefunden -> als Alias behandeln
                         home(
                                 player,
                                 PlotQuery.newQuery().withAlias(arg0),
@@ -191,7 +176,6 @@ public class HomeCommand extends Command {
                                 whenDone
                         );
                     } else {
-                        // Spieler gefunden -> dessen Plots
                         PlotQuery query = PlotQuery.newQuery().ownedBy(uuid).whereBasePlot();
                         sortBySettings(query, player);
                         home(player, query, 1, confirm, whenDone);
@@ -202,7 +186,6 @@ public class HomeCommand extends Command {
                 final String arg0 = args[0];
                 final String arg1 = args[1];
 
-                // /p h <spieler> <zahl>  -> Plots des Spielers, Seite X
                 if (!isInvalidPageNr(arg1)) {
                     int page = getPageNr(arg1);
                     if (page == Integer.MIN_VALUE) {
@@ -210,7 +193,6 @@ public class HomeCommand extends Command {
                         return CompletableFuture.completedFuture(false);
                     }
 
-                    // Erst prüfen ob arg0 eine Area ist
                     PlotArea plotArea = this.plotAreaManager.getPlotAreaByString(arg0);
                     if (plotArea != null) {
                         PlotQuery query = ownQuery(player).inArea(plotArea);
@@ -219,7 +201,6 @@ public class HomeCommand extends Command {
                         break;
                     }
 
-                    // Sonst als Spielername interpretieren
                     final int finalPage = page;
                     PlotSquared.get().getImpromptuUUIDPipeline().getSingle(arg0, (uuid, throwable) -> {
                         if (throwable instanceof TimeoutException) {
@@ -238,7 +219,6 @@ public class HomeCommand extends Command {
                     break;
                 }
 
-                // /p h <area> <x;y>  -> bestimmtes Plot in Area
                 PlotArea plotArea = this.plotAreaManager.getPlotAreaByString(arg0);
                 if (plotArea == null) {
                     sendUsage(player);
@@ -263,17 +243,11 @@ public class HomeCommand extends Command {
         return CompletableFuture.completedFuture(true);
     }
 
-    /**
-     * Query für die eigenen Plots des ausführenden Spielers.
-     */
     @NonNull
     private PlotQuery ownQuery(final @NonNull PlotPlayer<?> player) {
         return PlotQuery.newQuery().thatPasses(plot -> plot.isOwner(player.getUUID()));
     }
 
-    /**
-     * @deprecated Kept for internal compatibility.
-     */
     @NonNull
     private PlotQuery query(final @NonNull PlotPlayer<?> player) {
         return ownQuery(player);
@@ -346,7 +320,7 @@ public class HomeCommand extends Command {
             }
             case 1 -> {
                 completions.addAll(TabCompletions.asCompletions("last"));
-                final UUID uuid = PlotSquared.get().getImpromptuUUIDPipeline().getSingle(args[0]);
+                final @Nullable UUID uuid = PlotSquared.get().getImpromptuUUIDPipeline().getImmediately(args[0]);
                 if (uuid != null) {
                     final int count = PlotQuery.newQuery().ownedBy(uuid).whereBasePlot().asList().size();
                     completions.addAll(completePlotCountNumbers(count));
