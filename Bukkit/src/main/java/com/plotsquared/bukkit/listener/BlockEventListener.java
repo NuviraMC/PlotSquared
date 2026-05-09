@@ -80,6 +80,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -99,6 +100,7 @@ import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.block.MoistureChangeEvent;
 import org.bukkit.event.block.SpongeAbsorbEvent;
 import org.bukkit.event.world.StructureGrowEvent;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.projectiles.BlockProjectileSource;
 import org.bukkit.util.Vector;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -219,6 +221,18 @@ public class BlockEventListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void blockDamageAbort(BlockDamageAbortEvent event) {
+        Player player = event.getPlayer();
+        Location location = BukkitUtil.adapt(event.getBlock().getLocation());
+        PlotArea area = location.getPlotArea();
+        if (area == null) {
+            return;
+        }
+
+        stopNexoBlockBreak(player);
+    }
+
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void blockDestroy(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -250,6 +264,9 @@ public class BlockEventListener implements Listener {
             if (!plot.hasOwner()) {
                 if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY_UNOWNED, true)) {
                     event.setCancelled(true);
+                    BlockDamageAbortEvent damageAbortEvent = new BlockDamageAbortEvent(event.getPlayer(), event.getBlock(),
+                            event.getPlayer().getInventory().getItemInMainHand());
+                    Bukkit.getPluginManager().callEvent(damageAbortEvent);
                 }
                 return;
             }
@@ -273,6 +290,9 @@ public class BlockEventListener implements Listener {
                         )
                 );
                 event.setCancelled(true);
+                BlockDamageAbortEvent damageAbortEvent = new BlockDamageAbortEvent(event.getPlayer(), event.getBlock(),
+                        event.getPlayer().getInventory().getItemInMainHand());
+                Bukkit.getPluginManager().callEvent(damageAbortEvent);
             } else if (Settings.Done.RESTRICT_BUILDING && DoneFlag.isDone(plot)) {
                 if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_BUILD_OTHER)) {
                     plotPlayer.sendMessage(
@@ -302,6 +322,42 @@ public class BlockEventListener implements Listener {
                 )
         );
         event.setCancelled(true);
+        BlockDamageAbortEvent damageAbortEvent = new BlockDamageAbortEvent(event.getPlayer(), event.getBlock(),
+                event.getPlayer().getInventory().getItemInMainHand());
+        Bukkit.getPluginManager().callEvent(damageAbortEvent);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    public void onCancelledBlockBreak(BlockBreakEvent event) {
+        if (!event.isCancelled()) {
+            return;
+        }
+        Location location = BukkitUtil.adapt(event.getBlock().getLocation());
+        if (location.getPlotArea() == null) {
+            return;
+        }
+        stopNexoBlockBreak(event.getPlayer());
+    }
+
+    private void stopNexoBlockBreak(Player player) {
+        Plugin nexoPlugin = Bukkit.getPluginManager().getPlugin("Nexo");
+        if (nexoPlugin == null || !nexoPlugin.isEnabled()) {
+            return;
+        }
+        try {
+            Class<?> nexoClass = Class.forName("com.nexomc.nexo.NexoPlugin");
+            Object nexoInstance = nexoClass.getMethod("instance").invoke(null);
+            if (nexoInstance == null) {
+                return;
+            }
+            Object breakerManager = nexoClass.getMethod("breakerManager").invoke(nexoInstance);
+            if (breakerManager == null) {
+                return;
+            }
+            breakerManager.getClass().getMethod("stopBlockBreak", Player.class).invoke(breakerManager, player);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Nexo may be unavailable or in an invalid state; ignore to avoid affecting block handling.
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -537,35 +593,7 @@ public class BlockEventListener implements Listener {
                 event.setCancelled(true);
                 return;
             }
-            if (!plot.hasOwner()) {
-                BukkitPlayer plotPlayer = BukkitUtil.adapt(player);
-                if (plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY_UNOWNED)) {
-                    return;
-                }
-                event.setCancelled(true);
-                return;
-            }
-            BukkitPlayer plotPlayer = BukkitUtil.adapt(player);
-            if (!plot.isAdded(plotPlayer.getUUID())) {
-                List<BlockTypeWrapper> destroy = plot.getFlag(BreakFlag.class);
-                Block block = event.getBlock();
-                if (destroy
-                        .contains(BlockTypeWrapper.get(BukkitAdapter.asBlockType(block.getType())))
-                        || plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY_OTHER)) {
-                    return;
-                }
-                plot.debug(player.getName() + " could not break " + block.getType()
-                        + " because it was not in the break flag");
-                event.setCancelled(true);
-                return;
-            }
-            return;
         }
-        BukkitPlayer plotPlayer = BukkitUtil.adapt(player);
-        if (plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY_ROAD)) {
-            return;
-        }
-        event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -877,11 +905,11 @@ public class BlockEventListener implements Listener {
         Material type = event.getItem().getType();
         switch (type.toString()) {
             case "SHULKER_BOX", "WHITE_SHULKER_BOX", "ORANGE_SHULKER_BOX", "MAGENTA_SHULKER_BOX", "LIGHT_BLUE_SHULKER_BOX",
-                    "YELLOW_SHULKER_BOX", "LIME_SHULKER_BOX", "PINK_SHULKER_BOX", "GRAY_SHULKER_BOX", "LIGHT_GRAY_SHULKER_BOX",
-                    "CYAN_SHULKER_BOX", "PURPLE_SHULKER_BOX", "BLUE_SHULKER_BOX", "BROWN_SHULKER_BOX", "GREEN_SHULKER_BOX",
-                    "RED_SHULKER_BOX", "BLACK_SHULKER_BOX", "CARVED_PUMPKIN", "WITHER_SKELETON_SKULL", "FLINT_AND_STEEL",
-                    "BONE_MEAL", "SHEARS", "GLASS_BOTTLE", "GLOWSTONE", "COD_BUCKET", "PUFFERFISH_BUCKET", "SALMON_BUCKET",
-                    "TROPICAL_FISH_BUCKET", "AXOLOTL_BUCKET", "BUCKET", "WATER_BUCKET", "LAVA_BUCKET", "TADPOLE_BUCKET" -> {
+                 "YELLOW_SHULKER_BOX", "LIME_SHULKER_BOX", "PINK_SHULKER_BOX", "GRAY_SHULKER_BOX", "LIGHT_GRAY_SHULKER_BOX",
+                 "CYAN_SHULKER_BOX", "PURPLE_SHULKER_BOX", "BLUE_SHULKER_BOX", "BROWN_SHULKER_BOX", "GREEN_SHULKER_BOX",
+                 "RED_SHULKER_BOX", "BLACK_SHULKER_BOX", "CARVED_PUMPKIN", "WITHER_SKELETON_SKULL", "FLINT_AND_STEEL",
+                 "BONE_MEAL", "SHEARS", "GLASS_BOTTLE", "GLOWSTONE", "COD_BUCKET", "PUFFERFISH_BUCKET", "SALMON_BUCKET",
+                 "TROPICAL_FISH_BUCKET", "AXOLOTL_BUCKET", "BUCKET", "WATER_BUCKET", "LAVA_BUCKET", "TADPOLE_BUCKET" -> {
                 if (event.getBlock().getType() == Material.DROPPER) {
                     return;
                 }

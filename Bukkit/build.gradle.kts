@@ -15,6 +15,11 @@ repositories {
         name = "EssentialsX"
         url = uri("https://repo.essentialsx.net/releases/")
     }
+
+    maven {
+        name = "NexoMC"
+        url = uri("https://repo.nexomc.com/releases")
+    }
 }
 
 // Make sure we control the exact version of paper being included, while dropping spigot + bukkit
@@ -48,6 +53,7 @@ dependencies {
     compileOnly(libs.placeholderapi)
     compileOnly(libs.luckperms)
     compileOnly(libs.essentialsx)
+    compileOnly("com.nexomc:nexo:1.23") { isTransitive = false }
     compileOnly(libs.mvdwapi) { isTransitive = false }
 
     // Other libraries
