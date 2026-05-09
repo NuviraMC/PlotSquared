@@ -62,11 +62,20 @@ public class HomeCommand extends Command {
 
     private void home(
             final @NonNull PlotPlayer<?> player,
-            final @NonNull PlotQuery query, final int page,
+            final @NonNull PlotQuery query, int page,
+            final boolean basePlotOnly,
             final RunnableVal3<Command, Runnable, Runnable> confirm,
             final RunnableVal2<Command, CommandResult> whenDone
     ) {
+        final List<Plot> unsorted = query.asList();
+        if (basePlotOnly && unsorted.size() > 1) {
+            query.whereBasePlot();
+        }
+
         List<Plot> plots = query.asList();
+        if (page < 0) {
+            page = (plots.size() + 1) + page;
+        }
         if (plots.isEmpty()) {
             player.sendMessage(TranslatableCaption.of("invalid.found_no_plots"));
             return;
@@ -119,21 +128,17 @@ public class HomeCommand extends Command {
             return CompletableFuture.completedFuture(false);
         }
         PlotQuery query = query(player);
-        int page = 1; // page = index + 1
+        int page = Integer.MIN_VALUE; // page = index + 1
         String identifier;
         PlotArea plotArea;
         boolean basePlotOnly = true;
         switch (args.length) {
             case 1 -> {
                 identifier = args[0];
-                if (MathMan.isInteger(identifier)) {
-                    try {
-                        page = Integer.parseInt(identifier);
-                    } catch (NumberFormatException ignored) {
-                        player.sendMessage(
-                                TranslatableCaption.of("invalid.not_a_number"),
-                                TagResolver.resolver("value", Tag.inserting(Component.text(identifier)))
-                        );
+                if (!isInvalidPageNr(identifier)) {
+                    page = getPageNr(identifier);
+                    if (page == Integer.MIN_VALUE) {
+                        sendInvalidPageNrMsg(player);
                         return CompletableFuture.completedFuture(false);
                     }
                     sortBySettings(query, player);
@@ -166,15 +171,11 @@ public class HomeCommand extends Command {
                     break;
                 }
                 query.inArea(plotArea);
-                if (MathMan.isInteger(identifier)) {
+                if (!isInvalidPageNr(identifier)) {
                     // identifier is a page number
-                    try {
-                        page = Integer.parseInt(identifier);
-                    } catch (NumberFormatException ignored) {
-                        player.sendMessage(
-                                TranslatableCaption.of("invalid.not_a_number"),
-                                TagResolver.resolver("value", Tag.inserting(Component.text(identifier)))
-                        );
+                    page = getPageNr(identifier);
+                    if (page == Integer.MIN_VALUE) {
+                        sendInvalidPageNrMsg(player);
                         return CompletableFuture.completedFuture(false);
                     }
                     query.withSortingStrategy(SortingStrategy.SORT_BY_CREATION);
@@ -199,11 +200,44 @@ public class HomeCommand extends Command {
             }
             case 0 -> sortBySettings(query, player);
         }
-        if (basePlotOnly) {
-            query.whereBasePlot();
+        if (page == Integer.MIN_VALUE) {
+            page = 1;
         }
-        home(player, query, page, confirm, whenDone);
+        home(player, query, page, basePlotOnly, confirm, whenDone);
         return CompletableFuture.completedFuture(true);
+    }
+
+    private boolean isInvalidPageNr(String arg) {
+        if (MathMan.isInteger(arg)) {
+            return false;
+        } else if (arg.equals("last") || arg.equals("n")) {
+            return false;
+        }
+        return true;
+    }
+
+    private int getPageNr(String arg) {
+        if (MathMan.isInteger(arg)) {
+            try {
+                return Integer.parseInt(arg);
+            } catch (NumberFormatException ignored) {
+                return Integer.MIN_VALUE;
+            }
+        } else if (arg.equals("last") || arg.equals("n")) {
+            return -1;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    private void sendInvalidPageNrMsg(PlotPlayer<?> player) {
+        player.sendMessage(
+                TranslatableCaption.of("invalid.not_valid_number"),
+                TagResolver.resolver("value", Tag.inserting(Component.text("(1, ∞)")))
+        );
+        player.sendMessage(
+                TranslatableCaption.of("commandconfig.command_syntax"),
+                TagResolver.resolver("value", Tag.inserting(Component.text(getUsage())))
+        );
     }
 
     private void sortBySettings(PlotQuery plotQuery, PlotPlayer<?> player) {
@@ -224,6 +258,7 @@ public class HomeCommand extends Command {
             case 0 -> {
                 completions.addAll(
                         TabCompletions.completeAreas(args[0]));
+                completions.addAll(TabCompletions.asCompletions("last"));
                 if (args[0].isEmpty()) {
                     // if no input is given, only suggest 1 - 3
                     completions.addAll(
@@ -234,8 +269,11 @@ public class HomeCommand extends Command {
                 completions.addAll(
                         TabCompletions.completeNumbers(args[0], 10, 999));
             }
-            case 1 -> completions.addAll(
-                    TabCompletions.completeNumbers(args[1], 10, 999));
+            case 1 -> {
+                completions.addAll(TabCompletions.asCompletions("last"));
+                completions.addAll(
+                        TabCompletions.completeNumbers(args[1], 10, 999));
+            }
         }
         return completions;
     }
