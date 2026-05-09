@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.IntStream;
 
 @CommandDeclaration(command = "home",
         permission = "plots.home",
@@ -316,23 +317,42 @@ public class HomeCommand extends Command {
         }
     }
 
+    private @NonNull List<Command> completePlotCountNumbers(final int count) {
+        if (count <= 0) {
+            return Collections.emptyList();
+        }
+        return TabCompletions.asCompletions(
+                IntStream.rangeClosed(1, count)
+                        .mapToObj(String::valueOf)
+                        .toArray(String[]::new)
+        );
+    }
+
+    private @NonNull List<Command> ownPlotPageCompletions(final @NonNull PlotPlayer<?> player) {
+        final PlotQuery query = ownQuery(player);
+        sortBySettings(query, player);
+        query.whereBasePlot();
+        return completePlotCountNumbers(query.asList().size());
+    }
+
     @Override
     public Collection<Command> tab(PlotPlayer<?> player, String[] args, boolean space) {
         final List<Command> completions = new ArrayList<>();
         switch (args.length - 1) {
             case 0 -> {
                 completions.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
-                completions.addAll(TabCompletions.completeAreas(args[0]));
                 completions.addAll(TabCompletions.asCompletions("last"));
-                if (args[0].isEmpty()) {
-                    completions.addAll(TabCompletions.asCompletions("1", "2", "3"));
-                    break;
-                }
-                completions.addAll(TabCompletions.completeNumbers(args[0], 10, 999));
+                completions.addAll(ownPlotPageCompletions(player));
             }
             case 1 -> {
                 completions.addAll(TabCompletions.asCompletions("last"));
-                completions.addAll(TabCompletions.completeNumbers(args[1], 10, 999));
+                final UUID uuid = PlotSquared.get().getImpromptuUUIDPipeline().getSingle(args[0]);
+                if (uuid != null) {
+                    final int count = PlotQuery.newQuery().ownedBy(uuid).whereBasePlot().asList().size();
+                    completions.addAll(completePlotCountNumbers(count));
+                } else {
+                    completions.addAll(ownPlotPageCompletions(player));
+                }
             }
         }
         return completions;
