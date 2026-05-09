@@ -40,7 +40,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,7 +48,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.IntStream;
 
 @CommandDeclaration(command = "home",
         permission = "plots.home",
@@ -291,24 +289,6 @@ public class HomeCommand extends Command {
         }
     }
 
-    private @NonNull List<Command> completePlotCountNumbers(final int count) {
-        if (count <= 0) {
-            return Collections.emptyList();
-        }
-        return TabCompletions.asCompletions(
-                IntStream.rangeClosed(1, count)
-                        .mapToObj(String::valueOf)
-                        .toArray(String[]::new)
-        );
-    }
-
-    private @NonNull List<Command> ownPlotPageCompletions(final @NonNull PlotPlayer<?> player) {
-        final PlotQuery query = ownQuery(player);
-        sortBySettings(query, player);
-        query.whereBasePlot();
-        return completePlotCountNumbers(query.asList().size());
-    }
-
     @Override
     public Collection<Command> tab(PlotPlayer<?> player, String[] args, boolean space) {
         final List<Command> completions = new ArrayList<>();
@@ -316,18 +296,8 @@ public class HomeCommand extends Command {
             case 0 -> {
                 completions.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
                 completions.addAll(TabCompletions.asCompletions("last"));
-                completions.addAll(ownPlotPageCompletions(player));
             }
-            case 1 -> {
-                completions.addAll(TabCompletions.asCompletions("last"));
-                final @Nullable UUID uuid = PlotSquared.get().getImpromptuUUIDPipeline().getImmediately(args[0]);
-                if (uuid != null) {
-                    final int count = PlotQuery.newQuery().ownedBy(uuid).whereBasePlot().asList().size();
-                    completions.addAll(completePlotCountNumbers(count));
-                } else {
-                    completions.addAll(ownPlotPageCompletions(player));
-                }
-            }
+            case 1 -> completions.addAll(TabCompletions.asCompletions("last"));
         }
         return completions;
     }
