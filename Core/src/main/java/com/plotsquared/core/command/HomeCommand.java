@@ -67,8 +67,8 @@ public class HomeCommand extends Command {
             final RunnableVal3<Command, Runnable, Runnable> confirm,
             final RunnableVal2<Command, CommandResult> whenDone
     ) {
-        final List<Plot> unsorted = query.asList();
-        if (basePlotOnly && unsorted.size() > 1) {
+        final List<Plot> plotsBeforeBaseFilter = query.asList();
+        if (basePlotOnly && plotsBeforeBaseFilter.size() > 1) {
             query.whereBasePlot();
         }
 
