@@ -174,10 +174,19 @@ public class ChunkListener implements Listener {
         if (safe && shouldSave(world, chunk.getX(), chunk.getZ())) {
             return false;
         }
+        if (this.methodGetHandleChunk == null || this.mustNotSave == null || this.methodSetUnsaved == null) {
+            return false;
+        }
         Object c = objChunkStatusFull != null
                 ? this.methodGetHandleChunk.of(chunk).call(objChunkStatusFull)
                 : this.methodGetHandleChunk.of(chunk).call();
+        if (c == null) {
+            return false;
+        }
         RefField.RefExecutor field = this.mustNotSave.of(c);
+        if (field == null) {
+            return false;
+        }
         methodSetUnsaved.of(c).call(false);
         if (!((Boolean) field.get())) {
             field.set(true);
@@ -241,18 +250,21 @@ public class ChunkListener implements Listener {
         if (ignoreUnload) {
             return;
         }
-        Chunk chunk = event.getChunk();
-        if (Settings.Chunk_Processor.AUTO_TRIM) {
-            String world = chunk.getWorld().getName();
-            if ((!Settings.Enabled_Components.WORLDS || !SinglePlotArea.isSinglePlotWorld(world)) && this.plotAreaManager.hasPlotArea(
-                    world)) {
-                if (unloadChunk(world, chunk, true)) {
-                    return;
+        try {
+            Chunk chunk = event.getChunk();
+            if (Settings.Chunk_Processor.AUTO_TRIM) {
+                String world = chunk.getWorld().getName();
+                if ((!Settings.Enabled_Components.WORLDS || !SinglePlotArea.isSinglePlotWorld(world)) && this.plotAreaManager.hasPlotArea(
+                        world)) {
+                    if (unloadChunk(world, chunk, true)) {
+                        return;
+                    }
                 }
             }
-        }
-        if (processChunk(event.getChunk(), true)) {
-            chunk.setForceLoaded(true);
+            if (processChunk(chunk, true)) {
+                chunk.setForceLoaded(true);
+            }
+        } catch (NullPointerException ignored) {
         }
     }
 
