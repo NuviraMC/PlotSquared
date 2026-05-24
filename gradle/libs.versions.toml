@@ -13,7 +13,7 @@ log4j = "2.19.0"
 
 # Plugins
 worldedit = "7.2.20"
-fawe = "2.15.0"
+fawe = "2.15.1"
 placeholderapi = "2.12.2"
 luckperms = "5.5"
 essentialsx = "2.21.2"
@@ -35,7 +35,7 @@ serverlib = "2.3.7"
 # Gradle plugins
 shadow = "9.4.1"
 grgit = "4.1.1"
-spotless = "8.4.0"
+spotless = "8.5.1"
 publish = "0.36.0"
 runPaper = "3.0.2"
 
