@@ -46,7 +46,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 @CommandDeclaration(command = "setowner",
-        permission = "plots.admin.command.setowner",
+        permission = "plots.setowner",
         usage = "/plot setowner <player>",
         aliases = {"owner", "so", "seto"},
         category = CommandCategory.CLAIMING,
@@ -70,6 +70,16 @@ public class Owner extends SetCommand {
             );
             return false;
         }
+
+        // Check if the player has admin permission OR is the owner of the plot
+        boolean isAdmin = player.hasPermission(Permission.PERMISSION_ADMIN_COMMAND_SET_OWNER);
+        boolean isOwner = plot.isOwner(player.getUUID());
+
+        if (!isAdmin && !isOwner) {
+            player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
+            return false;
+        }
+
         @Nullable final UUID oldOwner = plot.getOwnerAbs();
         Set<Plot> plots = plot.getConnectedPlots();
 
