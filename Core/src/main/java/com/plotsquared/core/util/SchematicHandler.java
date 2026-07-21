@@ -516,6 +516,10 @@ public abstract class SchematicHandler {
                 rawJSON = reader.lines().collect(Collectors.joining());
             }
             JsonArray array = GSON.fromJson(rawJSON, JsonArray.class);
+            if (array == null) {
+                LOGGER.error("Error retrieving saves for UUID {}: empty or malformed response from web server", uuid);
+                return null;
+            }
             List<String> schematics = new ArrayList<>();
             for (int i = 0; i < array.size(); i++) {
                 String schematic = array.get(i).getAsString();

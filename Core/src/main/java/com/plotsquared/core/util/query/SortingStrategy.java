@@ -43,6 +43,14 @@ public enum SortingStrategy {
      */
     SORT_BY_CREATION,
     /**
+     * Sort by the player-settable value in the plot's
+     * {@link com.plotsquared.core.plot.flag.implementations.PlotOrderFlag}, ascending.
+     * Plots that share the same (default) value keep their relative creation-date order.
+     *
+     * @since TODO
+     */
+    SORT_BY_CUSTOM_ORDER,
+    /**
      * Sort using a comparator
      */
     COMPARATOR

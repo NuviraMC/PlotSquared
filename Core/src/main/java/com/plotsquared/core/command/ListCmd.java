@@ -203,7 +203,7 @@ public class ListCmd extends SubCommand {
                         .newQuery()
                         .ownersInclude(player)
                         .whereBasePlot()
-                        .withSortingStrategy(SortingStrategy.SORT_BY_TEMP));
+                        .withSortingStrategy(SortingStrategy.SORT_BY_CUSTOM_ORDER));
             }
             case "shared" -> {
                 if (!player.hasPermission(Permission.PERMISSION_LIST_SHARED)) {
@@ -400,7 +400,7 @@ public class ListCmd extends SubCommand {
                                     .newQuery()
                                     .ownersInclude(uuid)
                                     .whereBasePlot()
-                                    .withSortingStrategy(SortingStrategy.SORT_BY_TEMP));
+                                    .withSortingStrategy(SortingStrategy.SORT_BY_CUSTOM_ORDER));
                         }
                     }
                 });

@@ -385,7 +385,18 @@ public class BukkitEntityUtil {
             return true;
         } else if (dplot != null && (!dplot.equals(vplot) || Objects
                 .equals(dplot.getOwnerAbs(), vplot.getOwnerAbs()))) {
-            return vplot != null && vplot.getFlag(PveFlag.class);
+            if (vplot == null) {
+                return false;
+            }
+            if (vplot.getFlag(PveFlag.class)) {
+                return true;
+            }
+            // Owner/trusted are always exposed to PvE damage on their own plot.
+            // Added (non-trusted) members only while the plot owner is online.
+            if (victim instanceof Player) {
+                return vplot.isAdded(BukkitUtil.adapt((Player) victim).getUUID());
+            }
+            return false;
         }
         //disable the firework damage. too much of a headache to support at the moment.
         if (vplot != null) {

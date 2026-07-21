@@ -25,6 +25,7 @@ import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.Rating;
 import com.plotsquared.core.plot.flag.implementations.DoneFlag;
+import com.plotsquared.core.plot.flag.implementations.PlotOrderFlag;
 import com.plotsquared.core.plot.world.PlotAreaManager;
 import com.plotsquared.core.util.MathMan;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -375,6 +376,13 @@ public final class PlotQuery implements Iterable<Plot> {
             });
         } else if (this.sortingStrategy == SortingStrategy.SORT_BY_CREATION) {
             return PlotSquared.get().sortPlots(result, PlotSquared.SortType.CREATION_DATE, this.priorityArea);
+        } else if (this.sortingStrategy == SortingStrategy.SORT_BY_CUSTOM_ORDER) {
+            // Establish a stable creation-based baseline first, then stable-sort on top of it
+            // by the custom order flag. Plots sharing the same order value (e.g. the untouched
+            // default) therefore keep their relative creation-date order.
+            List<Plot> baseline = PlotSquared.get().sortPlots(result, PlotSquared.SortType.CREATION_DATE, this.priorityArea);
+            baseline.sort(Comparator.comparingInt(plot -> plot.getFlag(PlotOrderFlag.class)));
+            return baseline;
         } else if (this.sortingStrategy == SortingStrategy.COMPARATOR) {
             result.sort(this.plotComparator);
         }

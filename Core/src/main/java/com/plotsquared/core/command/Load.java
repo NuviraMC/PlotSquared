@@ -171,8 +171,12 @@ public class Load extends SubCommand {
             if (schematics == null) {
                 plot.addRunning();
                 TaskManager.runTaskAsync(() -> {
-                    List<String> schematics1 = this.schematicHandler.getSaves(player.getUUID());
-                    plot.removeRunning();
+                    List<String> schematics1;
+                    try {
+                        schematics1 = this.schematicHandler.getSaves(player.getUUID());
+                    } finally {
+                        plot.removeRunning();
+                    }
                     if ((schematics1 == null) || schematics1.isEmpty()) {
                         player.sendMessage(TranslatableCaption.of("web.load_failed"));
                         return;

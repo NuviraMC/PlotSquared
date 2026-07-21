@@ -205,7 +205,9 @@ public enum Permission implements ComponentLike {
     PERMISSION_ADMIN_FLIGHT("plots.admin.flight"),
     PERMISSION_ADMIN_COMPONENTS_OTHER("plots.admin.component.other"),
     PERMISSION_ADMIN_BYPASS_BORDER("plots.admin.border.bypass"),
-    PERMISSION_ADMIN_BYPASS_ECON("plots.admin.econ.bypass");
+    PERMISSION_ADMIN_BYPASS_ECON("plots.admin.econ.bypass"),
+    PERMISSION_SET_ORDER("plots.setorder"),
+    PERMISSION_ADMIN_SET_ORDER("plots.admin.setorder");
     //</editor-fold>
 
     private final String text;
