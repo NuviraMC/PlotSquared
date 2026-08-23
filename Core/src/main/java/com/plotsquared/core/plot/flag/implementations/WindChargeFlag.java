@@ -16,28 +16,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.plotsquared.bukkit.util;
+package com.plotsquared.core.plot.flag.implementations;
 
-import com.google.inject.Singleton;
-import com.plotsquared.core.util.ChunkManager;
-import com.sk89q.worldedit.math.BlockVector2;
-import com.sk89q.worldedit.regions.CuboidRegion;
+import com.plotsquared.core.configuration.caption.TranslatableCaption;
+import com.plotsquared.core.plot.flag.types.BooleanFlag;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.concurrent.CompletableFuture;
+public class WindChargeFlag extends BooleanFlag<WindChargeFlag> {
 
-@Singleton
-public class BukkitChunkManager extends ChunkManager {
+    public static final WindChargeFlag WIND_CHARGE_TRUE = new WindChargeFlag(true);
+    public static final WindChargeFlag WIND_CHARGE_FALSE = new WindChargeFlag(false);
 
-    public static boolean isIn(CuboidRegion region, int x, int z) {
-        return x >= region.getMinimumPoint().getX() && x <= region.getMaximumPoint().getX() && z >= region
-                .getMinimumPoint()
-                .getZ() && z <= region
-                .getMaximumPoint().getZ();
+    private WindChargeFlag(boolean value) {
+        super(value, TranslatableCaption.of("flags.flag_description_windcharge"));
     }
 
     @Override
-    public CompletableFuture<?> loadChunk(String world, BlockVector2 chunkLoc, boolean force) {
-        return PaperSupport.getChunkAtAsync(BukkitUtil.getWorld(world), chunkLoc.getX(), chunkLoc.getZ(), force);
+    protected WindChargeFlag flagOf(@NonNull Boolean value) {
+        return value ? WIND_CHARGE_TRUE : WIND_CHARGE_FALSE;
     }
 
 }
